@@ -86,51 +86,66 @@ def run_model(det, audio, file_dur, samp_rate, detection_thresh, max_num_calls=0
 
     return det_time_file, det_prob_file
 
+# Plots all figures from figure 1. Still trying to show probability vs. time graph as well
 def plot_calls(audio, sample_rate, det_time, det_prob):
 
-
+    # Store duration of audio in seconds for future plotting
     orig_audio_length = len(audio)/float(samp_rate_orig)
-
-    print(len(audio)/float(samp_rate)/10 == len(audio)/float(samp_rate_orig))
-    print("Absolute error: ", abs(len(audio)/float(samp_rate)/10 - len(audio)/float(samp_rate_orig)))
     
-    # create spectrogram
+    # Create spectrograms raw and processed from full audio 
+    # Previous calls only input chunks of the audio
+    # For future, try concatenating each chunk's spectrogram to plot off of the main code
     raw_spec, proc_spec = det.create_spec(audio, samp_rate)
 
+    # Initialize subplots 4 rows and 1 column
     fig, axes = plt.subplots(4, 1, figsize=(10, 12))
     
+    # Plot the raw audio first with samples from 0 to duration of audio 
+    # according to the original sample rate (before time expansion)
     ax = axes[0]
     t = np.arange(0, orig_audio_length, 1.0/samp_rate/10)
-    ax.plot(t, audio[0:len(audio)]/1000)
+    ax.plot(t, audio[0:len(audio)]/1000) # normalize amplitude values for a cleaner look
     ax.set_ylabel("Amplitude (*10^3)")
     ax.set_xlabel("Time (s)")
     ax.set(title="Raw Audio")
 
+    # Plot the raw spectrogram generated from the full audio
+    # Get time values from 0 to duration of audio with samples according to spectrogram frames
     ax = axes[1]
     raw_times = np.arange(0, orig_audio_length, orig_audio_length/float(raw_spec.shape[1]))
     raw_freqs = np.arange(det.min_freq, det.max_freq, 1)
-    ax.pcolormesh(raw_times, raw_freqs, np.flipud(raw_spec))
+    ax.pcolormesh(raw_times, raw_freqs, np.flipud(raw_spec)) # Spectrogram is flipped in spectrogram.py so we flip again
     ax.set_ylabel("Frequency (kHz)")
     ax.set_xlabel("Time (s)")
     ax.set(title="Raw Spectrogram")
 
+    # Plot the processed spectrogram generated from the full audio
+    # Get time values from 0 to duration of audio with samples according to spectrogram frames
     ax = axes[2]
     proc_times = np.arange(0, orig_audio_length, orig_audio_length/float(proc_spec.shape[1]))
     proc_freqs = np.arange(det.min_freq, det.max_freq, 2)
-    ax.pcolormesh(proc_times, proc_freqs, np.flipud(proc_spec))
+    ax.pcolormesh(proc_times, proc_freqs, np.flipud(proc_spec)) # Spectrogram is flipped in spectrogram.py so we flip again
     ax.set_ylabel("Frequency (kHz)")
     ax.set_xlabel("Time (s)")
     ax.set(title="Noise-Reduced Spectrogram")
 
+    # Plot the raw spectrogram generated from the full audio
+    # Get time values from 0 to duration of audio with samples according to spectrogram frames
     ax = axes[3]
     ax.pcolormesh(raw_times, raw_freqs, np.flipud(raw_spec))
     ax.set_ylabel("Frequency (kHz)")
     ax.set_xlabel("Time (s)")
     ax.set(title="Detections Overlayed")
+    # Draw a boundary over each x-coordinate calculated by CNN model. 
+    # Use 2 times the fft window length as the width of our boundary.
+    # x-coordinate is approximately at the start of each call
     for i in det_time:
         ax.add_patch(patches.Rectangle((i, 0), det.slice_scale*2, 
         raw_spec.shape[0], fill=False, edgecolor='yellow', lw=2))
     
+    # Organize all of our plots so no overlapping and show plot for each file
+    # Each window corresponds to a file in our data folder, closing a window moves to next file
+    # Closing the last window will mark the end of the program
     plt.tight_layout()
     plt.show()
     
