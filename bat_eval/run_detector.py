@@ -1,4 +1,6 @@
 from __future__ import print_function
+import chunk
+from curses import raw
 import numpy as np
 import os
 import fnmatch
@@ -9,6 +11,8 @@ import write_op as wo
 import cpu_detection as detector
 import mywavfile
 
+import matplotlib.pyplot as plt
+from matplotlib import patches, text, patheffects
 
 def get_audio_files(ip_dir):
     matches = []
@@ -67,7 +71,7 @@ def run_model(det, audio, file_dur, samp_rate, detection_thresh, max_num_calls=0
         chunk_duration = audio_chunk.shape[0] / float(samp_rate)
 
         # create spectrogram
-        spec = det.create_spec(audio_chunk, samp_rate)
+        hspec, spec = det.create_spec(audio_chunk, samp_rate)
 
         # run detector
         det_loc, prob_det = det.run_detection(spec, chunk_duration, detection_thresh,
@@ -82,6 +86,56 @@ def run_model(det, audio, file_dur, samp_rate, detection_thresh, max_num_calls=0
 
     return det_time_file, det_prob_file
 
+def plot_calls(audio, sample_rate, det_time, det_prob):
+
+
+    orig_audio_length = len(audio)/float(samp_rate_orig)
+
+    print(len(audio)/float(samp_rate)/10 == len(audio)/float(samp_rate_orig))
+    print("Absolute error: ", abs(len(audio)/float(samp_rate)/10 - len(audio)/float(samp_rate_orig)))
+    
+    # create spectrogram
+    raw_spec, proc_spec = det.create_spec(audio, samp_rate)
+
+    fig, axes = plt.subplots(4, 1, figsize=(10, 12))
+    
+    ax = axes[0]
+    t = np.arange(0, orig_audio_length, 1.0/samp_rate/10)
+    ax.plot(t, audio[0:len(audio)]/1000)
+    ax.set_ylabel("Amplitude (*10^3)")
+    ax.set_xlabel("Time (s)")
+    ax.set(title="Raw Audio")
+
+    ax = axes[1]
+    raw_times = np.arange(0, orig_audio_length, orig_audio_length/float(raw_spec.shape[1]))
+    raw_freqs = np.arange(det.min_freq, det.max_freq, 1)
+    ax.pcolormesh(raw_times, raw_freqs, np.flipud(raw_spec))
+    ax.set_ylabel("Frequency (kHz)")
+    ax.set_xlabel("Time (s)")
+    ax.set(title="Raw Spectrogram")
+
+    ax = axes[2]
+    proc_times = np.arange(0, orig_audio_length, orig_audio_length/float(proc_spec.shape[1]))
+    proc_freqs = np.arange(det.min_freq, det.max_freq, 2)
+    ax.pcolormesh(proc_times, proc_freqs, np.flipud(proc_spec))
+    ax.set_ylabel("Frequency (kHz)")
+    ax.set_xlabel("Time (s)")
+    ax.set(title="Noise-Reduced Spectrogram")
+
+    ax = axes[3]
+    ax.pcolormesh(raw_times, raw_freqs, np.flipud(raw_spec))
+    ax.set_ylabel("Frequency (kHz)")
+    ax.set_xlabel("Time (s)")
+    ax.set(title="Detections Overlayed")
+    for i in det_time:
+        ax.add_patch(patches.Rectangle((i, 0), det.slice_scale*2, 
+        raw_spec.shape[0], fill=False, edgecolor='yellow', lw=2))
+    
+    plt.tight_layout()
+    plt.show()
+    
+
+
 
 if __name__ == "__main__":
 
@@ -92,8 +146,8 @@ if __name__ == "__main__":
     save_summary_result = True     # if True will create a single csv file with all results
 
     # load data
-    data_dir = 'wavs'                                   # this is the path to your audio files
-    op_ann_dir = 'results'                              # this where your results will be saved
+    data_dir = 'ub_calls'                                   # this is the path to your audio files
+    op_ann_dir = 'ub_results'                              # this where your results will be saved
     op_ann_dir_ind = os.path.join(op_ann_dir, 'individual_results')  # this where individual results will be saved
     op_file_name_total = os.path.join(op_ann_dir, 'results.csv')
     if not os.path.isdir(op_ann_dir):
@@ -111,7 +165,9 @@ if __name__ == "__main__":
 
     # load and create the detector
     det_model_file = 'models/detector.npy'
+    # The parameters are in models/detector_params.json
     det_params_file = det_model_file[:-4] + '_params.json'
+    # Method CPUDetector is in cpu_detection.py
     det = detector.CPUDetector(det_model_file, det_params_file)
 
     # loop through audio files
@@ -136,6 +192,8 @@ if __name__ == "__main__":
         print('  detection time', round(toc-tic, 3), '(secs)')
         num_calls = len(det_time)
         print('  ' + str(num_calls) + ' calls found')
+
+        plot_calls(audio, samp_rate, det_time, det_prob)
 
         # save results
         if save_individual_results:

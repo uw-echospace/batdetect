@@ -1,0 +1,2 @@
+Filename,Label,LabelTimeStamp,Spec_NStep,Spec_NWin,Spec_x1,Spec_y1,Spec_x2,Spec_y2,LabelStartTime_Seconds,LabelEndTime_Seconds,LabelArea_DataPoints,DetectorConfidence
+/20210921_03000045test3.wav,bat,2022-05-02T17:29:18.023258,0.001,0.003,560.529,0,561.529,375.0,0.56100000000000005,0.56200000000000006,,0.96599999999999997
