@@ -90,6 +90,7 @@ class Spectrogram:
 
             # add some zeros if too small
             req_height = max_freq-min_freq
+
             if spec.shape[0] < req_height:
                 zero_pad = np.zeros((req_height-spec.shape[0], spec.shape[1]), dtype=np.float32)
                 spec = np.vstack((zero_pad, spec))

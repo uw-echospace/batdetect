@@ -6,6 +6,7 @@ import json
 import time
 
 from spectrogram import Spectrogram
+import matplotlib.pyplot as plt
 import cnn_helpers as ch
 
 import warnings
@@ -33,7 +34,7 @@ class CPUDetector:
         params_file is the path to the network parameters
         """
 
-        self.weights = np.load(weight_file, encoding='latin1')
+        self.weights = np.load(weight_file, encoding='latin1', allow_pickle=True)
         if not all([weight.dtype==np.float32 for weight in self.weights]):
             for i in range(self.weights.shape[0]):
                 self.weights[i] = self.weights[i].astype(np.float32)
@@ -98,13 +99,16 @@ class CPUDetector:
         hspec = self.sp.gen_spectrogram(audio, sampling_rate, self.slice_scale,
                                     self.overlap, crop_spec=self.crop_spec,
                                     max_freq=self.max_freq, min_freq=self.min_freq)
+
         hspec = self.sp.process_spectrogram(hspec, denoise_spec=self.denoise,
                                     smooth_spec=self.smooth_spec)
+
         nsize = (np.ceil(hspec.shape[0]/2.0).astype(int), np.ceil(hspec.shape[1]/2.0).astype(int))
         spec = ch.aligned_malloc(nsize, np.float32)
 
         zoom(hspec, 0.5, output=spec, order=1)
-        return spec
+
+        return hspec, spec
 
 
     def eval_network(self, ip):
